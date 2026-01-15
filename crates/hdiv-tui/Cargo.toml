@@ -1,0 +1,12 @@
+[package]
+name = "hdiv-tui"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hdiv-core = { path = "../hdiv-core" }
+hdiv-render = { path = "../hdiv-render" }
+ratatui = { workspace = true }
+crossterm = { workspace = true }
+anyhow = { workspace = true }
+image = { workspace = true }

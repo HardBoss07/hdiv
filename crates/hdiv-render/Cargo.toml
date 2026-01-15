@@ -1,0 +1,13 @@
+[package]
+name = "hdiv-render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hdiv-core = { path = "../hdiv-core" }
+image = { workspace = true }
+crossterm = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true } # Snapshot testing

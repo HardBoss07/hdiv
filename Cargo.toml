@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "crates/hdiv-core",
+    "crates/hdiv-render",
+    "crates/hdiv-tui",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Graphics & Math
+image = "0.25"
+crossterm = "0.27"
+ratatui = "0.26"
+palette = "0.7.6"
+
+# Error Handling & Utils
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Testing
+insta = "1.34" # Essential for testing TUI/ANSI output
