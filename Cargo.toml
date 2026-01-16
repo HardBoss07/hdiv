@@ -16,6 +16,7 @@ palette = "0.7.6"
 # Error Handling & Utils
 anyhow = "1.0"
 thiserror = "1.0"
+color-eyre = "0.6.5"
 
 # Testing
 insta = "1.34" # Essential for testing TUI/ANSI output
