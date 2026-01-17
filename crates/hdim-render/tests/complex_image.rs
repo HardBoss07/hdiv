@@ -1,5 +1,5 @@
 use hdim_render::Renderer;
-use image::{RgbaImage, Rgba};
+use image::{Rgba, RgbaImage};
 
 #[test]
 fn test_complex_render() {
@@ -9,7 +9,7 @@ fn test_complex_render() {
     // Test with area_size 1 (High Res)
     let renderer = Renderer::new(2);
     let output = renderer.render(&img).unwrap();
-    
+
     // Debug statement
     println!("{}", output);
 
@@ -42,10 +42,12 @@ fn generate_benchmark_image() -> RgbaImage {
             let dy = y as i32 - (size / 2) as i32;
             let dist_sq = dx * dx + dy * dy;
 
-            if dist_sq < 2500 { // Large Green Circle
+            if dist_sq < 2500 {
+                // Large Green Circle
                 color = [0, 255, 0, 255];
             }
-            if dist_sq < 400 {  // Small Yellow Core
+            if dist_sq < 400 {
+                // Small Yellow Core
                 color = [255, 255, 0, 255];
             }
 
