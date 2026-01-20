@@ -74,9 +74,9 @@ pub fn render(image: &DynamicImage, view: &View) -> Result<String> {
     // the height of the pixel block for one half is half the y_ratio.
     // However, the loop iterates `target_height` times, and each iteration handles a full character,
     // which covers `y_ratio` pixels in height. The logic inside handles the two halves.
-    let top_block_h = (y_ratio / 2.0).round().max(1.0) as u32;
-    let bottom_block_h = top_block_h; // Keep it simple for now
-    let block_w = x_ratio.round().max(1.0) as u32;
+    let top_block_height = (y_ratio / 2.0).round().max(1.0) as u32;
+    let bottom_block_height = top_block_height; // Keep it simple for now
+    let block_width = x_ratio.round().max(1.0) as u32;
 
     for y in 0..view.target_height {
         for x in 0..view.target_width {
@@ -88,19 +88,19 @@ pub fn render(image: &DynamicImage, view: &View) -> Result<String> {
                 image,
                 source_pixel_x,
                 source_pixel_y_top,
-                block_w,
-                top_block_h,
+                block_width,
+                top_block_height,
             );
 
             // Calculate the source pixel coordinates for the bottom half-block
-            let source_pixel_y_bot = source_pixel_y_top + top_block_h;
+            let source_pixel_y_bot = source_pixel_y_top + top_block_height;
 
             let bot = get_average_rgb(
                 image,
                 source_pixel_x,
                 source_pixel_y_bot,
-                block_w,
-                bottom_block_h,
+                block_width,
+                bottom_block_height,
             );
 
             write!(

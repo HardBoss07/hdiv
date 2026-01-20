@@ -1,74 +1,46 @@
-use hdim_render::Renderer;
+use hdim_render::{View, render};
+use image::GenericImageView;
 use std::path::PathBuf;
 
-#[test]
-fn test_render_real_image_snapshot_size_2() {
+fn run_snapshot_test_for_area_size(area_size: u32) {
     // 1. Setup Path
-    // Adjust the path to where you store your test images
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("tests/images/WindowsXP.png");
 
     // 2. Load the image
-    // Note: This will fail the test if the image isn't found
-    let img = image::open(&path).expect(&format!("Could not find test image at {:?}", path));
+    let image = image::open(&path).expect(&format!("Could not find test image at {:?}", path));
 
-    // 3. Initialize Renderer
-    // Using area_size 4 to downsample a large image for terminal display
-    let renderer = Renderer::new(2);
+    // 3. Define the View to replicate old `area_size` behavior
+    let (image_width, image_height) = image.dimensions();
+    let view = View {
+        source_x: 0,
+        source_y: 0,
+        source_width: image_width,
+        source_height: image_height,
+        target_width: (image_width as f32 / area_size as f32).ceil() as u32,
+        target_height: (image_height as f32 / (area_size as f32 * 2.0)).ceil() as u32,
+    };
 
     // 4. Run System Under Test
-    let output = renderer.render(&img).expect("Rendering failed");
+    let output = render(&image, &view).expect("Rendering failed");
     println!("{}", output);
 
     // 5. Verify with Snapshot
-    // Note: If the image is large, the snapshot file will be quite big.
-    insta::assert_snapshot!(output);
+    let snapshot_name = format!("render_real_image_snapshot_size_{}", area_size);
+    insta::assert_snapshot!(snapshot_name, output);
+}
+
+#[test]
+fn test_render_real_image_snapshot_size_2() {
+    run_snapshot_test_for_area_size(2);
 }
 
 #[test]
 fn test_render_real_image_snapshot_size_4() {
-    // 1. Setup Path
-    // Adjust the path to where you store your test images
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("tests/images/WindowsXP.png");
-
-    // 2. Load the image
-    // Note: This will fail the test if the image isn't found
-    let img = image::open(&path).expect(&format!("Could not find test image at {:?}", path));
-
-    // 3. Initialize Renderer
-    // Using area_size 4 to downsample a large image for terminal display
-    let renderer = Renderer::new(4);
-
-    // 4. Run System Under Test
-    let output = renderer.render(&img).expect("Rendering failed");
-    println!("{}", output);
-
-    // 5. Verify with Snapshot
-    // Note: If the image is large, the snapshot file will be quite big.
-    insta::assert_snapshot!(output);
+    run_snapshot_test_for_area_size(4);
 }
 
 #[test]
 fn test_render_real_image_snapshot_size_8() {
-    // 1. Setup Path
-    // Adjust the path to where you store your test images
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("tests/images/WindowsXP.png");
-
-    // 2. Load the image
-    // Note: This will fail the test if the image isn't found
-    let img = image::open(&path).expect(&format!("Could not find test image at {:?}", path));
-
-    // 3. Initialize Renderer
-    // Using area_size 4 to downsample a large image for terminal display
-    let renderer = Renderer::new(8);
-
-    // 4. Run System Under Test
-    let output = renderer.render(&img).expect("Rendering failed");
-    println!("{}", output);
-
-    // 5. Verify with Snapshot
-    // Note: If the image is large, the snapshot file will be quite big.
-    insta::assert_snapshot!(output);
+    run_snapshot_test_for_area_size(8);
 }

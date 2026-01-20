@@ -1,14 +1,25 @@
-use hdim_render::Renderer;
-use image::{Rgba, RgbaImage};
+use hdim_render::{View, render};
+use image::{GenericImageView, Rgba, RgbaImage};
 
 #[test]
 fn test_complex_render() {
-    let raw_img = generate_benchmark_image();
-    let img = image::DynamicImage::ImageRgba8(raw_img);
+    let raw_image = generate_benchmark_image();
+    let image = image::DynamicImage::ImageRgba8(raw_image);
 
-    // Test with area_size 1 (High Res)
-    let renderer = Renderer::new(2);
-    let output = renderer.render(&img).unwrap();
+    // Define the View to replicate old `area_size: 2`
+    let (image_width, image_height) = image.dimensions();
+    let area_size = 2;
+    let view = View {
+        source_x: 0,
+        source_y: 0,
+        source_width: image_width,
+        source_height: image_height,
+        target_width: (image_width as f32 / area_size as f32).ceil() as u32,
+        target_height: (image_height as f32 / (area_size as f32 * 2.0)).ceil() as u32,
+    };
+
+    // Run System Under Test
+    let output = render(&image, &view).unwrap();
 
     // Debug statement
     println!("{}", output);
@@ -19,7 +30,7 @@ fn test_complex_render() {
 
 fn generate_benchmark_image() -> RgbaImage {
     let size = 256;
-    let mut img = RgbaImage::new(size, size);
+    let mut image = RgbaImage::new(size, size);
 
     for y in 0..size {
         for x in 0..size {
@@ -57,8 +68,8 @@ fn generate_benchmark_image() -> RgbaImage {
                 color = [brightness, brightness, brightness, 255];
             }
 
-            img.put_pixel(x, y, Rgba(color));
+            image.put_pixel(x, y, Rgba(color));
         }
     }
-    img
+    image
 }
