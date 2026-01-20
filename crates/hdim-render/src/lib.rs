@@ -2,71 +2,114 @@ use anyhow::Result;
 use image::{DynamicImage, GenericImageView};
 use std::fmt::Write;
 
-pub struct Renderer {
-    pub area_size: u32, // The "Zoom" factor (area_size x area_size pixels per block)
+/// Defines the mapping between a rectangular area of the source image
+/// and the target rendering area in the terminal.
+pub struct View {
+    /// The top-left X coordinate of the view on the source image (in pixels).
+    pub source_x: u32,
+    /// The top-left Y coordinate of the view on the source image (in pixels).
+    pub source_y: u32,
+    /// The width of the view on the source image (in pixels).
+    pub source_width: u32,
+    /// The height of the view on the source image (in pixels).
+    pub source_height: u32,
+    /// The width of the target render area (in terminal columns).
+    pub target_width: u32,
+    /// The height of the target render area (in terminal rows).
+    pub target_height: u32,
 }
 
-impl Renderer {
-    pub fn new(area_size: u32) -> Self {
-        Self { area_size }
+/// Calculates the average RGB color for a specific rectangular area of the image.
+fn get_average_rgb(
+    image: &DynamicImage,
+    start_x: u32,
+    start_y: u32,
+    width: u32,
+    height: u32,
+) -> [u8; 3] {
+    let (image_width, image_height) = image.dimensions();
+    let mut r_total: u64 = 0;
+    let mut g_total: u64 = 0;
+    let mut b_total: u64 = 0;
+    let mut count: u64 = 0;
+
+    // Define the boundaries of the area to iterate over, clamping to image dimensions
+    let end_y = (start_y + height).min(image_height);
+    let end_x = (start_x + width).min(image_width);
+
+    for py in start_y..end_y {
+        for px in start_x..end_x {
+            let pixel = image.get_pixel(px, py);
+            r_total += pixel[0] as u64;
+            g_total += pixel[1] as u64;
+            b_total += pixel[2] as u64;
+            count += 1;
+        }
     }
 
-    /// Calculates the average RGB color for a specific rectangular area of the image
-    fn get_average_rgb(&self, img: &DynamicImage, start_x: u32, start_y: u32) -> [u8; 3] {
-        let (w, h) = img.dimensions();
-        let mut r_total: u64 = 0;
-        let mut g_total: u64 = 0;
-        let mut b_total: u64 = 0;
-        let mut count: u64 = 0;
-
-        // Iterate over the square area defined by area_size
-        for py in start_y..(start_y + self.area_size).min(h) {
-            for px in start_x..(start_x + self.area_size).min(w) {
-                let pixel = img.get_pixel(px, py);
-                r_total += pixel[0] as u64;
-                g_total += pixel[1] as u64;
-                b_total += pixel[2] as u64;
-                count += 1;
-            }
-        }
-
-        if count == 0 {
-            return [0, 0, 0];
-        }
-
-        [
-            (r_total / count) as u8,
-            (g_total / count) as u8,
-            (b_total / count) as u8,
-        ]
+    if count == 0 {
+        return [0, 0, 0];
     }
 
-    pub fn render(&self, img: &DynamicImage) -> Result<String> {
-        let (w, h) = img.dimensions();
-        let mut output = String::new();
+    [
+        (r_total / count) as u8,
+        (g_total / count) as u8,
+        (b_total / count) as u8,
+    ]
+}
 
-        // Move in steps of area_size for X
-        // Move in steps of (area_size * 2) for Y because one char = two vertical blocks
-        for y in (0..h).step_by((self.area_size * 2) as usize) {
-            for x in (0..w).step_by(self.area_size as usize) {
-                // Average for the "Top" half of the terminal character
-                let top = self.get_average_rgb(img, x, y);
+/// Renders a portion of an image to a string using half-block characters.
+///
+/// The rendering is defined by the `View` struct, which maps a source rectangle
+/// from the image to a target area in the terminal.
+pub fn render(image: &DynamicImage, view: &View) -> Result<String> {
+    let mut output = String::new();
 
-                // Average for the "Bottom" half (offset by one area_size vertically)
-                let bot = if y + self.area_size < h {
-                    self.get_average_rgb(img, x, y + self.area_size)
-                } else {
-                    top // Fallback if image ends mid-character
-                };
+    // Calculate the number of source pixels that correspond to one terminal character cell.
+    // Use floating point for precision to avoid cumulative errors.
+    let x_ratio = view.source_width as f32 / view.target_width as f32;
+    let y_ratio = view.source_height as f32 / view.target_height as f32;
 
-                write!(
-                    output,
-                    "\x1b[48;2;{};{};{}m\x1b[38;2;{};{};{}m▄",
-                    top[0], top[1], top[2], bot[0], bot[1], bot[2]
-                )?;
-            }
-            output.push_str("\x1b[0m\n");
+    // Since each character cell represents two vertical pixels (top and bottom half),
+    // the height of the pixel block for one half is half the y_ratio.
+    // However, the loop iterates `target_height` times, and each iteration handles a full character,
+    // which covers `y_ratio` pixels in height. The logic inside handles the two halves.
+    let top_block_h = (y_ratio / 2.0).round().max(1.0) as u32;
+    let bottom_block_h = top_block_h; // Keep it simple for now
+    let block_w = x_ratio.round().max(1.0) as u32;
+
+    for y in 0..view.target_height {
+        for x in 0..view.target_width {
+            // Calculate the source pixel coordinates for the top half-block
+            let source_pixel_x = view.source_x + (x as f32 * x_ratio) as u32;
+            let source_pixel_y_top = view.source_y + (y as f32 * y_ratio) as u32;
+
+            let top = get_average_rgb(
+                image,
+                source_pixel_x,
+                source_pixel_y_top,
+                block_w,
+                top_block_h,
+            );
+
+            // Calculate the source pixel coordinates for the bottom half-block
+            let source_pixel_y_bot = source_pixel_y_top + top_block_h;
+
+            let bot = get_average_rgb(
+                image,
+                source_pixel_x,
+                source_pixel_y_bot,
+                block_w,
+                bottom_block_h,
+            );
+
+            write!(
+                output,
+                "\x1b[48;2;{};{};{}m\x1b[38;2;{};{};{}m▄",
+                top[0], top[1], top[2], bot[0], bot[1], bot[2]
+            )?;
         }
-        Ok(output)
+        output.push_str("\x1b[0m\n");
     }
+    Ok(output)
 }
