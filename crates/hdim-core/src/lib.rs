@@ -1,4 +1,28 @@
-use image::DynamicImage;
+use anyhow::Result;
+use image::{DynamicImage, GenericImageView};
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone)]
+pub struct HdimImage {
+    pub path: PathBuf,
+    pub data: DynamicImage,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl HdimImage {
+    pub fn from_path(path: &Path) -> Result<Self> {
+        let data = image::open(path)?;
+        let (width, height) = data.dimensions();
+
+        Ok(HdimImage {
+            path: path.to_path_buf(),
+            data,
+            width,
+            height,
+        })
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Size {
@@ -7,7 +31,6 @@ pub struct Size {
 }
 
 pub fn calculate_resize(img: &DynamicImage, max_size: Size) -> Size {
-    use image::GenericImageView;
     let (w, h) = img.dimensions();
 
     // Terminal cells are taller (approx 1:2 ratio)
