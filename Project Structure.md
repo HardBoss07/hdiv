@@ -5,7 +5,8 @@ hdim/
 ├── crates/
 │   ├── hdim-core/
 │   │   ├── src/
-│   │   │   └── lib.rs
+│   │   │   ├── lib.rs
+│   │   │   └── state.rs
 │   │   ├── tests/
 │   │   │   └── resizing.rs
 │   │   └── Cargo.toml
@@ -31,6 +32,9 @@ hdim/
 │   │   └── Cargo.toml
 │   └── hdim-tui/
 │       ├── src/
+│       │   ├── components/
+│       │   │   ├── crop.rs
+│       │   │   └── mod.rs
 │       │   ├── app.rs
 │       │   ├── events.rs
 │       │   ├── main.rs
