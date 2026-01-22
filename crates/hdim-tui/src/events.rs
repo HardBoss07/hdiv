@@ -1,6 +1,8 @@
-use crate::app::{ActiveWidget, App, AppMode, Tool};
+use crate::app::{ActiveWidget, App, AppMode};
+use crate::components::crop::handle_crop_events;
 use color_eyre::eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use hdim_core::state::Tool;
 use std::time::{Duration, Instant};
 
 const PAN_AMOUNT_CHARACTERS: u32 = 10; // Number of characters to pan per key press
@@ -61,33 +63,24 @@ pub fn handle_events(app: &mut App) -> Result<bool> {
                             app.selected_tool = None;
                             app.active_widget = ActiveWidget::Main;
                         }
-                        KeyCode::Tab => {
+                        _ => {
                             if let Some(Tool::Crop) = app.selected_tool {
-                                app.selected_crop_option_index =
-                                    (app.selected_crop_option_index + 1) % 5;
-                            }
-                        }
-                        KeyCode::Enter => {
-                            if let Some(Tool::Crop) = app.selected_tool {
-                                if app.selected_crop_option_index < 4 {
-                                    app.mode = AppMode::EditingCropValue;
-                                } else {
-                                    // TODO: "Crop from viewport" logic
+                                handle_crop_events(key, app);
+                            } else {
+                                match app.active_widget {
+                                    ActiveWidget::Main => match key.code {
+                                        KeyCode::Up => app.scroll(0, -pan_amount_pixels),
+                                        KeyCode::Down => app.scroll(0, pan_amount_pixels),
+                                        KeyCode::Left => app.scroll(-pan_amount_pixels, 0),
+                                        KeyCode::Right => app.scroll(pan_amount_pixels, 0),
+                                        KeyCode::PageUp => app.zoom(1.0 / ZOOM_FACTOR),
+                                        KeyCode::PageDown => app.zoom(ZOOM_FACTOR),
+                                        _ => {}
+                                    },
+                                    ActiveWidget::Tools => {}
                                 }
                             }
                         }
-                        _ => match app.active_widget {
-                            ActiveWidget::Main => match key.code {
-                                KeyCode::Up => app.scroll(0, -pan_amount_pixels),
-                                KeyCode::Down => app.scroll(0, pan_amount_pixels),
-                                KeyCode::Left => app.scroll(-pan_amount_pixels, 0),
-                                KeyCode::Right => app.scroll(pan_amount_pixels, 0),
-                                KeyCode::PageUp => app.zoom(1.0 / ZOOM_FACTOR),
-                                KeyCode::PageDown => app.zoom(ZOOM_FACTOR),
-                                _ => {}
-                            },
-                            ActiveWidget::Tools => {}
-                        },
                     },
                 }
             }

@@ -1,6 +1,8 @@
-use crate::app::{App, AppMode, Tool};
+use crate::app::{App, AppMode};
+use crate::components::crop::render_crop_options;
 use ansi_to_tui::IntoText;
 use color_eyre::eyre::Result;
+use hdim_core::state::Tool;
 use hdim_render::view::View;
 use ratatui::{
     prelude::*,
@@ -84,39 +86,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     );
 
     let right_banner_content = if let Some(Tool::Crop) = app.selected_tool {
-        let crop_options = ["Left", "Right", "Top", "Bottom", "Crop from viewport"];
-        let crop_items: Vec<ListItem> = crop_options
-            .iter()
-            .enumerate()
-            .map(|(i, &option)| {
-                let mut text = if i < 4 {
-                    let value = match i {
-                        0 => app.crop_state.left,
-                        1 => app.crop_state.right,
-                        2 => app.crop_state.top,
-                        3 => app.crop_state.bottom,
-                        _ => unreachable!(),
-                    };
-                    format!("{}: {}", option, value)
-                } else {
-                    option.to_string()
-                };
-
-                if app.mode == AppMode::EditingCropValue && app.selected_crop_option_index == i {
-                    text.push_str(&format!(" {}", app.crop_input));
-                }
-
-                let mut item = ListItem::new(text);
-                if app.selected_crop_option_index == i {
-                    item = item.style(Style::default().add_modifier(Modifier::REVERSED));
-                }
-                item
-            })
-            .collect();
-
-        let crop_list = List::new(crop_items)
-            .block(Block::default().borders(Borders::ALL).title("Crop Options"));
-        crop_list
+        render_crop_options(app)
     } else {
         List::new(vec![ListItem::new(" Right Banner Content ")])
             .block(Block::default().borders(Borders::ALL).title("Right"))

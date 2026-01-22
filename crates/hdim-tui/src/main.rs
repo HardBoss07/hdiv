@@ -1,14 +1,14 @@
 mod app;
+mod components;
 mod events;
 mod ui;
-
+use app::App;
 use color_eyre::eyre::{Result, eyre};
 use hdim_core::HdimImage;
 use ratatui::DefaultTerminal;
 use std::env;
 use std::path::PathBuf;
 
-use crate::app::App;
 use crate::events::handle_events;
 use crate::ui::render;
 

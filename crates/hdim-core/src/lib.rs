@@ -1,3 +1,4 @@
+pub mod state;
 use anyhow::Result;
 use image::{DynamicImage, GenericImageView};
 use std::path::{Path, PathBuf};
