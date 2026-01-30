@@ -1,4 +1,4 @@
-use crate::app::{App, AppMode};
+use crate::app::App;
 use crate::components::crop::render_crop_options;
 use ansi_to_tui::IntoText;
 use color_eyre::eyre::Result;
