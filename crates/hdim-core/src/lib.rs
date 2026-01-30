@@ -1,3 +1,4 @@
+pub mod exif;
 pub mod state;
 use anyhow::Result;
 use image::{DynamicImage, GenericImageView};

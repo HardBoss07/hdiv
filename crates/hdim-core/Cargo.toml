@@ -7,3 +7,4 @@ edition = "2024"
 image = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
+kamadak-exif = { workspace = true }

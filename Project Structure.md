@@ -1,10 +1,19 @@
 # Project Structure
 
 ```
-hdim/
+./
 ├── crates/
 │   ├── hdim-core/
 │   │   ├── src/
+│   │   │   ├── exif/
+│   │   │   │   ├── camera.rs
+│   │   │   │   ├── date_time.rs
+│   │   │   │   ├── exif_data.rs
+│   │   │   │   ├── exposure.rs
+│   │   │   │   ├── gps.rs
+│   │   │   │   ├── image.rs
+│   │   │   │   ├── lens.rs
+│   │   │   │   └── mod.rs
 │   │   │   ├── lib.rs
 │   │   │   └── state.rs
 │   │   ├── tests/
@@ -42,6 +51,7 @@ hdim/
 │       └── Cargo.toml
 ├── Cargo.lock
 ├── Cargo.toml
+├── GEMINI.md
 ├── LICENSE
 ├── Project Structure.md
 └── README.md
