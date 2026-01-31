@@ -1,20 +1,27 @@
+use crate::components::exif_view::ExifView;
 use color_eyre::eyre::{Ok, Result};
 use hdim_core::{
     HdimImage,
+    exif::ExifData,
     state::{CropState, Tool},
 };
-use std::time::{Duration, Instant};
+use std::{
+    fs::File,
+    time::{Duration, Instant},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ActiveWidget {
     Main,
     Tools,
+    RightToolbar,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AppMode {
     Normal,
     EditingCropValue,
+    ExifView,
 }
 
 /// Application state
@@ -42,10 +49,20 @@ pub struct App {
     pub selected_crop_option_index: usize,
     // The input string for crop values
     pub crop_input: String,
+    // The EXIF data of the image
+    pub exif_data: Option<ExifData>,
+    // The state of the EXIF view
+    pub exif_view: Option<ExifView>,
+    // Whether to show the right toolbar
+    pub show_right_toolbar: bool,
 }
 
 impl App {
     pub fn new(hdim_image: HdimImage, initial_zoom: f32) -> Result<Self> {
+        let mut file = File::open(hdim_image.path.clone())?;
+        let exif_data = ExifData::get_exif_data(&mut file).ok();
+        let exif_view = exif_data.as_ref().map(ExifView::new);
+
         Ok(Self {
             hdim_image,
             source_pos: (0, 0),
@@ -58,6 +75,9 @@ impl App {
             mode: AppMode::Normal,
             selected_crop_option_index: 0,
             crop_input: String::new(),
+            exif_data,
+            exif_view,
+            show_right_toolbar: false,
         })
     }
 

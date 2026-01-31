@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hdim-core = { path = "../hdim-core" }
+hdim-core = { path = "../hdim-core", features = ["exif"] }
 hdim-render = { path = "../hdim-render" }
 ratatui.workspace = true
 crossterm = { workspace = true }

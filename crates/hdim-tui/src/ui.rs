@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::{App, AppMode};
 use crate::components::crop::render_crop_options;
 use ansi_to_tui::IntoText;
 use color_eyre::eyre::Result;
@@ -10,6 +10,18 @@ use ratatui::{
 };
 
 pub fn render(frame: &mut Frame, app: &mut App) {
+    let main_layout = if app.show_right_toolbar {
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)])
+            .split(frame.area())
+    } else {
+        Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(100)])
+            .split(frame.area())
+    };
+
     let vertical_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -17,29 +29,22 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             Constraint::Min(0),
             Constraint::Length(3),
         ])
-        .split(frame.area());
+        .split(main_layout[0]);
 
     let middle_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(60),
-            Constraint::Percentage(20),
-        ])
+        .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
         .split(vertical_chunks[1]);
 
     let main_area = middle_chunks[1];
 
-    // DYNAMICALLY RENDER THE VIEWPORT
+    // RENDER THE VIEWPORT
     let image_width = app.hdim_image.width;
     let image_height = app.hdim_image.height;
 
-    // The number of source pixels to cover is based on the TUI area size and zoom level.
-    // Each character cell is two "pixels" high.
     let source_width = (main_area.width as f32 * app.zoom).round() as u32;
     let source_height = (main_area.height as f32 * app.zoom * 2.0).round() as u32;
 
-    // Clamp source position to prevent scrolling past the edge
     app.source_pos.0 = app
         .source_pos
         .0
@@ -63,7 +68,6 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         Err(_) => "Error rendering image".into_text().unwrap(),
     };
 
-    // UI shows magnification factor, which is the inverse of the internal zoom ratio
     let magnification = 1.0 / app.zoom;
     let main_title = format!(
         "Main Window - Pos [Y: {}, X: {}] - Zoom: {:.2}x",
@@ -76,7 +80,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         vertical_chunks[0],
     );
 
-    let tools = List::new([ListItem::new("1. Crop")])
+    let tools = List::new([ListItem::new("1. Crop"), ListItem::new("2. Exif")])
         .block(Block::default().borders(Borders::ALL).title("Tools"));
     frame.render_widget(tools, middle_chunks[0]);
 
@@ -85,18 +89,46 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         main_area,
     );
 
-    let right_banner_content = if let Some(Tool::Crop) = app.selected_tool {
-        render_crop_options(app)
-    } else {
-        List::new(vec![ListItem::new(" Right Banner Content ")])
-            .block(Block::default().borders(Borders::ALL).title("Right"))
-    };
-    frame.render_widget(right_banner_content, middle_chunks[2]);
+    if app.show_right_toolbar {
+        match app.mode {
+            AppMode::ExifView => {
+                if let Some(exif_view) = &mut app.exif_view {
+                    let mut list = exif_view.widget();
+                    if app.active_widget == crate::app::ActiveWidget::RightToolbar {
+                        list =
+                            list.highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+                    }
+                    frame.render_stateful_widget(list, main_layout[1], &mut exif_view.state);
+                } else {
+                    // Fallback if exif_view is None in ExifView mode
+                    frame.render_widget(
+                        List::new(vec![ListItem::new("No EXIF data available.")])
+                            .block(Block::default().borders(Borders::ALL).title("EXIF Data")),
+                        main_layout[1],
+                    );
+                }
+            }
+            AppMode::Normal | AppMode::EditingCropValue => {
+                if let Some(Tool::Crop) = app.selected_tool {
+                    frame.render_widget(render_crop_options(app), main_layout[1]);
+                } else {
+                    // Default content for the right toolbar when no tool is selected
+                    frame.render_widget(
+                        List::new(vec![ListItem::new("Right Toolbar Content")])
+                            .block(Block::default().borders(Borders::ALL).title("Right")),
+                        main_layout[1],
+                    );
+                }
+            }
+        };
+    }
 
-    let bottom_text = if let Some(Tool::Crop) = app.selected_tool {
-        "Tab to switch | Enter to edit/select | Esc to deselect"
-    } else {
-        " Arrows to Pan | PgUp/PgDn to Zoom | 'q' to Quit "
+    let bottom_text = match app.mode {
+        AppMode::Normal if app.selected_tool.is_some() => {
+            "Tab to switch | Enter to edit/select | Esc to deselect"
+        }
+        AppMode::ExifView => "Up/Down to scroll | Esc to deselect",
+        _ => " Arrows to Pan | PgUp/PgDn to Zoom | 'q' to Quit ",
     };
 
     frame.render_widget(

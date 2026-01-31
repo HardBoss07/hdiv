@@ -1,7 +1,7 @@
 use crate::app::{ActiveWidget, App, AppMode};
 use crate::components::crop::handle_crop_events;
 use color_eyre::eyre::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use hdim_core::state::Tool;
 use std::time::{Duration, Instant};
 
@@ -11,77 +11,11 @@ const ZOOM_FACTOR: f32 = 1.2; // Zoom factor per key press
 pub fn handle_events(app: &mut App) -> Result<bool> {
     if event::poll(Duration::from_millis(16))? {
         if app.last_input_time.elapsed() >= app.input_delay {
-            let mut last_key_event = None;
-            // Drain the event queue, only keeping the last key press event
-            while event::poll(Duration::from_millis(0))? {
-                if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
-                        last_key_event = Some(key);
-                    }
-                }
-            }
-
-            if let Some(key) = last_key_event {
-                app.last_input_time = Instant::now();
-                // Pan amount is scaled by zoom to maintain consistent screen-space speed
-                let pan_amount_pixels = (PAN_AMOUNT_CHARACTERS as f32 * app.zoom).round() as i32;
-
-                match app.mode {
-                    AppMode::EditingCropValue => match key.code {
-                        KeyCode::Char(c) if c.is_ascii_digit() => {
-                            app.crop_input.push(c);
-                        }
-                        KeyCode::Backspace => {
-                            app.crop_input.pop();
-                        }
-                        KeyCode::Enter => {
-                            if let Ok(value) = app.crop_input.parse::<u32>() {
-                                match app.selected_crop_option_index {
-                                    0 => app.crop_state.left = value,
-                                    1 => app.crop_state.right = value,
-                                    2 => app.crop_state.top = value,
-                                    3 => app.crop_state.bottom = value,
-                                    _ => {}
-                                }
-                            }
-                            app.crop_input.clear();
-                            app.mode = AppMode::Normal;
-                        }
-                        KeyCode::Esc => {
-                            app.crop_input.clear();
-                            app.mode = AppMode::Normal;
-                        }
-                        _ => {}
-                    },
-                    AppMode::Normal => match key.code {
-                        KeyCode::Char('q') => return Ok(true),
-                        KeyCode::Char('1') => {
-                            app.selected_tool = Some(Tool::Crop);
-                            app.active_widget = ActiveWidget::Tools;
-                        }
-                        KeyCode::Esc => {
-                            app.selected_tool = None;
-                            app.active_widget = ActiveWidget::Main;
-                        }
-                        _ => {
-                            if let Some(Tool::Crop) = app.selected_tool {
-                                handle_crop_events(key, app);
-                            } else {
-                                match app.active_widget {
-                                    ActiveWidget::Main => match key.code {
-                                        KeyCode::Up => app.scroll(0, -pan_amount_pixels),
-                                        KeyCode::Down => app.scroll(0, pan_amount_pixels),
-                                        KeyCode::Left => app.scroll(-pan_amount_pixels, 0),
-                                        KeyCode::Right => app.scroll(pan_amount_pixels, 0),
-                                        KeyCode::PageUp => app.zoom(1.0 / ZOOM_FACTOR),
-                                        KeyCode::PageDown => app.zoom(ZOOM_FACTOR),
-                                        _ => {}
-                                    },
-                                    ActiveWidget::Tools => {}
-                                }
-                            }
-                        }
-                    },
+            let event = event::read()?;
+            if let Event::Key(key) = event {
+                if key.kind == KeyEventKind::Press {
+                    app.last_input_time = Instant::now();
+                    handle_key_press(app, key);
                 }
             }
         } else {
@@ -91,5 +25,99 @@ pub fn handle_events(app: &mut App) -> Result<bool> {
             }
         }
     }
-    Ok(false)
+    Ok(app.mode == AppMode::Normal
+        && matches!(event::read(), Ok(Event::Key(key)) if key.code == KeyCode::Char('q')))
+}
+
+fn handle_key_press(app: &mut App, key: KeyEvent) {
+    let pan_amount_pixels = (PAN_AMOUNT_CHARACTERS as f32 * app.zoom).round() as i32;
+
+    match app.mode {
+        AppMode::ExifView => match key.code {
+            KeyCode::Up => {
+                if let Some(exif_view) = app.exif_view.as_mut() {
+                    exif_view.previous();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(exif_view) = app.exif_view.as_mut() {
+                    exif_view.next();
+                }
+            }
+            KeyCode::Esc => {
+                app.mode = AppMode::Normal;
+                app.show_right_toolbar = false;
+                app.active_widget = ActiveWidget::Main;
+            }
+            _ => {}
+        },
+        AppMode::EditingCropValue => match key.code {
+            KeyCode::Char(c) if c.is_ascii_digit() => {
+                app.crop_input.push(c);
+            }
+            KeyCode::Backspace => {
+                app.crop_input.pop();
+            }
+            KeyCode::Enter => {
+                if let Ok(value) = app.crop_input.parse::<u32>() {
+                    match app.selected_crop_option_index {
+                        0 => app.crop_state.left = value,
+                        1 => app.crop_state.right = value,
+                        2 => app.crop_state.top = value,
+                        3 => app.crop_state.bottom = value,
+                        _ => {}
+                    }
+                }
+                app.crop_input.clear();
+                app.mode = AppMode::Normal;
+            }
+            KeyCode::Esc => {
+                app.crop_input.clear();
+                app.mode = AppMode::Normal;
+            }
+            _ => {}
+        },
+        AppMode::Normal => match key.code {
+            KeyCode::Char('q') => {
+                // This is now handled in the main loop for a more responsive exit.
+            }
+            KeyCode::Char('1') => {
+                app.selected_tool = Some(Tool::Crop);
+                app.show_right_toolbar = true;
+                app.active_widget = ActiveWidget::RightToolbar;
+            }
+            KeyCode::Char('2') => {
+                app.selected_tool = Some(Tool::Exif);
+                app.mode = AppMode::ExifView;
+                app.show_right_toolbar = true;
+                app.active_widget = ActiveWidget::RightToolbar;
+                if let Some(exif_view) = &mut app.exif_view {
+                    exif_view.state.select(Some(0));
+                }
+            }
+            KeyCode::Esc => {
+                app.selected_tool = None;
+                app.show_right_toolbar = false;
+                app.active_widget = ActiveWidget::Main;
+            }
+            _ => {
+                if let Some(Tool::Crop) = app.selected_tool {
+                    handle_crop_events(key, app);
+                } else {
+                    match app.active_widget {
+                        ActiveWidget::Main => match key.code {
+                            KeyCode::Up => app.scroll(0, -pan_amount_pixels),
+                            KeyCode::Down => app.scroll(0, pan_amount_pixels),
+                            KeyCode::Left => app.scroll(-pan_amount_pixels, 0),
+                            KeyCode::Right => app.scroll(pan_amount_pixels, 0),
+                            KeyCode::PageUp => app.zoom(1.0 / ZOOM_FACTOR),
+                            KeyCode::PageDown => app.zoom(ZOOM_FACTOR),
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        },
+    }
 }

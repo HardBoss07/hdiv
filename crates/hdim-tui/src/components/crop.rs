@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, List, ListItem},
 };
 
-pub fn render_crop_options(app: &App) -> List {
+pub fn render_crop_options<'a>(app: &'a App) -> List<'a> {
     let crop_options = ["Left", "Right", "Top", "Bottom", "Crop from viewport"];
     let crop_items: Vec<ListItem> = crop_options
         .iter()
@@ -80,5 +80,6 @@ pub fn handle_crop_events(key: KeyEvent, app: &mut App) {
             }
             _ => {}
         },
+        AppMode::ExifView => {} // Do nothing in ExifView mode
     }
 }
