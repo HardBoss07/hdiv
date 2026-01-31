@@ -1,3 +1,4 @@
+#![cfg(feature = "exif")]
 use super::{
     CameraExif, DateTimeExif, ExposureExif, GpsExif, ImageExif, LensExif, get_camera_exif,
     get_date_time_exif, get_exposure_exif, get_gps_exif, get_image_exif, get_lens_exif,

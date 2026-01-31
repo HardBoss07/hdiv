@@ -1,3 +1,4 @@
+#![cfg(feature = "exif")]
 use super::util::get_rational;
 use exif::{Exif, In, Tag};
 

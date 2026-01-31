@@ -1,24 +1,25 @@
-use super::util::{get_ascii, get_rational_vec};
+#![cfg(feature = "exif")]
+use super::util::{get_ascii, get_rational, get_rational_vec};
 use exif::{Exif, In, Tag};
 
 #[derive(Clone, Debug)]
 pub struct LensExif {
     pub make: Option<String>,
     pub model: Option<String>,
-    pub min_focal_length: Option<f64>,
-    pub max_focal_length: Option<f64>,
-    pub min_aperture: Option<f64>,
-    pub max_aperture: Option<f64>,
+    pub focal_length: Option<f64>,
+    pub f_number_range: Option<String>,
 }
 
 pub fn get_lens_exif(exif: &Exif) -> Option<LensExif> {
-    let lens_spec = exif.get_field(Tag::LensSpecification, In::PRIMARY);
+    let lens_spec = get_rational_vec(exif.get_field(Tag::LensSpecification, In::PRIMARY));
     Some(LensExif {
         make: get_ascii(exif.get_field(Tag::LensMake, In::PRIMARY)),
         model: get_ascii(exif.get_field(Tag::LensModel, In::PRIMARY)),
-        min_focal_length: get_rational_vec(lens_spec).and_then(|v| v.get(0).copied()),
-        max_focal_length: get_rational_vec(lens_spec).and_then(|v| v.get(1).copied()),
-        min_aperture: get_rational_vec(lens_spec).and_then(|v| v.get(2).copied()),
-        max_aperture: get_rational_vec(lens_spec).and_then(|v| v.get(3).copied()),
+        focal_length: get_rational(exif.get_field(Tag::FocalLength, In::PRIMARY)),
+        f_number_range: lens_spec.map(|v| {
+            let min = v.get(2).map(|f| format!("{:.1}", f)).unwrap_or_default();
+            let max = v.get(3).map(|f| format!("{:.1}", f)).unwrap_or_default();
+            format!("f/{} - f/{}", min, max)
+        }),
     })
 }

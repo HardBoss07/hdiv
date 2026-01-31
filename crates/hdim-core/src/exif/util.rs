@@ -1,3 +1,4 @@
+#![cfg(feature = "exif")]
 use exif::{Field, Value};
 
 pub fn get_ascii(field: Option<&Field>) -> Option<String> {

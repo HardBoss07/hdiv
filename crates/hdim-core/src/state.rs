@@ -1,6 +1,7 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Tool {
     Crop,
+    Exif,
 }
 
 #[derive(Clone, Copy, Debug)]

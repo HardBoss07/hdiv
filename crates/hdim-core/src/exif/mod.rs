@@ -1,3 +1,4 @@
+#![cfg(feature = "exif")]
 pub mod camera;
 pub mod date_time;
 pub mod exif_data;

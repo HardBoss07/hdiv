@@ -1,3 +1,4 @@
+#[cfg(feature = "exif")]
 pub mod exif;
 pub mod state;
 use anyhow::Result;

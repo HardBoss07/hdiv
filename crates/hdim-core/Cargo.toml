@@ -3,8 +3,12 @@ name = "hdim-core"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+exif = ["dep:kamadak-exif"]
+
 [dependencies]
 image = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
-kamadak-exif = { workspace = true }
+kamadak-exif = { workspace = true, optional = true }
