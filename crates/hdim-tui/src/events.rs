@@ -11,11 +11,21 @@ const ZOOM_FACTOR: f32 = 1.2; // Zoom factor per key press
 pub fn handle_events(app: &mut App) -> Result<bool> {
     if event::poll(Duration::from_millis(16))? {
         if app.last_input_time.elapsed() >= app.input_delay {
-            let event = event::read()?;
-            if let Event::Key(key) = event {
-                if key.kind == KeyEventKind::Press {
-                    app.last_input_time = Instant::now();
-                    handle_key_press(app, key);
+            let mut last_key_event = None;
+            // Drain the event queue, only keeping the last key press event
+            while event::poll(Duration::from_millis(0))? {
+                if let Event::Key(key) = event::read()? {
+                    if key.kind == KeyEventKind::Press {
+                        last_key_event = Some(key);
+                    }
+                }
+            }
+
+            if let Some(key) = last_key_event {
+                app.last_input_time = Instant::now();
+                handle_key_press(app, key);
+                if key.code == KeyCode::Char('q') {
+                    return Ok(true);
                 }
             }
         } else {
@@ -25,8 +35,7 @@ pub fn handle_events(app: &mut App) -> Result<bool> {
             }
         }
     }
-    Ok(app.mode == AppMode::Normal
-        && matches!(event::read(), Ok(Event::Key(key)) if key.code == KeyCode::Char('q')))
+    Ok(false)
 }
 
 fn handle_key_press(app: &mut App, key: KeyEvent) {
