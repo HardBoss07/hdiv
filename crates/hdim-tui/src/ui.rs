@@ -10,33 +10,34 @@ use ratatui::{
 };
 
 pub fn render(frame: &mut Frame, app: &mut App) {
-    let main_layout = if app.show_right_toolbar {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(80), Constraint::Percentage(20)])
-            .split(frame.area())
-    } else {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(100)])
-            .split(frame.area())
-    };
-
-    let vertical_chunks = Layout::default()
+    let global_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),
-            Constraint::Min(0),
-            Constraint::Length(3),
+            Constraint::Length(3), // Top Navigation Bar
+            Constraint::Min(0),    // Middle section (left, main, right)
+            Constraint::Length(3), // Bottom Navigation Bar
         ])
-        .split(main_layout[0]);
+        .split(frame.area());
 
-    let middle_chunks = Layout::default()
+    let top_nav_area = global_layout[0];
+    let middle_section_area = global_layout[1];
+    let bottom_nav_area = global_layout[2];
+
+    // Determine constraints for the middle section based on right toolbar visibility
+    let middle_constraints = [
+        Constraint::Length(20), // Left Toolbar
+        Constraint::Min(0),     // Main Content
+        Constraint::Length(20), // Right Toolbar
+    ];
+
+    let middle_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(20), Constraint::Percentage(80)])
-        .split(vertical_chunks[1]);
+        .constraints(middle_constraints)
+        .split(middle_section_area);
 
-    let main_area = middle_chunks[1];
+    let left_toolbar_area = middle_layout[0];
+    let main_area = middle_layout[1];
+    let right_toolbar_area = middle_layout[2];
 
     // RENDER THE VIEWPORT
     let image_width = app.hdim_image.width;
@@ -74,21 +75,25 @@ pub fn render(frame: &mut Frame, app: &mut App) {
         app.source_pos.1, app.source_pos.0, magnification
     );
 
+    // Render Top Navigation Bar
     frame.render_widget(
         Paragraph::new(" Navigation Bar / Title ")
             .block(Block::default().borders(Borders::ALL).title("Top")),
-        vertical_chunks[0],
+        top_nav_area,
     );
 
+    // Render Left Toolbar
     let tools = List::new([ListItem::new("1. Crop"), ListItem::new("2. Exif")])
         .block(Block::default().borders(Borders::ALL).title("Tools"));
-    frame.render_widget(tools, middle_chunks[0]);
+    frame.render_widget(tools, left_toolbar_area);
 
+    // Render Main Content
     frame.render_widget(
         Paragraph::new(image_text).block(Block::default().borders(Borders::ALL).title(main_title)),
         main_area,
     );
 
+    // Render Right Toolbar (if visible)
     if app.show_right_toolbar {
         match app.mode {
             AppMode::ExifView => {
@@ -98,31 +103,33 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                         list =
                             list.highlight_style(Style::default().add_modifier(Modifier::REVERSED));
                     }
-                    frame.render_stateful_widget(list, main_layout[1], &mut exif_view.state);
+                    frame.render_stateful_widget(list, right_toolbar_area, &mut exif_view.state);
                 } else {
-                    // Fallback if exif_view is None in ExifView mode
                     frame.render_widget(
                         List::new(vec![ListItem::new("No EXIF data available.")])
                             .block(Block::default().borders(Borders::ALL).title("EXIF Data")),
-                        main_layout[1],
+                        right_toolbar_area,
                     );
                 }
             }
             AppMode::Normal | AppMode::EditingCropValue => {
                 if let Some(Tool::Crop) = app.selected_tool {
-                    frame.render_widget(render_crop_options(app), main_layout[1]);
+                    frame.render_widget(render_crop_options(app), right_toolbar_area);
                 } else {
-                    // Default content for the right toolbar when no tool is selected
                     frame.render_widget(
                         List::new(vec![ListItem::new("Right Toolbar Content")])
                             .block(Block::default().borders(Borders::ALL).title("Right")),
-                        main_layout[1],
+                        right_toolbar_area,
                     );
                 }
             }
         };
+    } else {
+        // Render an empty block if the right toolbar is not explicitly shown
+        frame.render_widget(Block::default().borders(Borders::NONE), right_toolbar_area);
     }
 
+    // Render Bottom Navigation Bar
     let bottom_text = match app.mode {
         AppMode::Normal if app.selected_tool.is_some() => {
             "Tab to switch | Enter to edit/select | Esc to deselect"
@@ -133,6 +140,6 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     frame.render_widget(
         Paragraph::new(bottom_text).block(Block::default().borders(Borders::ALL).title("Bottom")),
-        vertical_chunks[2],
+        bottom_nav_area,
     );
 }

@@ -77,7 +77,7 @@ impl App {
             crop_input: String::new(),
             exif_data,
             exif_view,
-            show_right_toolbar: false,
+            show_right_toolbar: true,
         })
     }
 

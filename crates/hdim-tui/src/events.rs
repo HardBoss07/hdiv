@@ -46,7 +46,6 @@ fn handle_key_press(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Esc => {
                 app.mode = AppMode::Normal;
-                app.show_right_toolbar = false;
                 app.active_widget = ActiveWidget::Main;
             }
             _ => {}
@@ -83,13 +82,11 @@ fn handle_key_press(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Char('1') => {
                 app.selected_tool = Some(Tool::Crop);
-                app.show_right_toolbar = true;
                 app.active_widget = ActiveWidget::RightToolbar;
             }
             KeyCode::Char('2') => {
                 app.selected_tool = Some(Tool::Exif);
                 app.mode = AppMode::ExifView;
-                app.show_right_toolbar = true;
                 app.active_widget = ActiveWidget::RightToolbar;
                 if let Some(exif_view) = &mut app.exif_view {
                     exif_view.state.select(Some(0));
@@ -97,7 +94,6 @@ fn handle_key_press(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Esc => {
                 app.selected_tool = None;
-                app.show_right_toolbar = false;
                 app.active_widget = ActiveWidget::Main;
             }
             _ => {
